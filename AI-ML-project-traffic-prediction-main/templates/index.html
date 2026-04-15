@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bengaluru Traffic Predictor | AI-Powered Insights</title>
+  <meta name="description"
+    content="AI-powered hourly traffic predictions for any Bengaluru location. See peak hours, 7-day forecast, weather impact, and 24-hour breakdown." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:      #07101e;
+      --surface: #0f1d30;
+      --surface2:#152336;
+      --blue:    #3b82f6;
+      --cyan:    #06b6d4;
+      --green:   #22c55e;
+      --orange:  #f97316;
+      --red:     #ef4444;
+      --yellow:  #eab308;
+      --purple:  #a78bfa;
+      --text:    #e8f0fe;
+      --muted:   #7a90ad;
+      --border:  rgba(59,130,246,.14);
+      --glow:    0 0 40px rgba(59,130,246,.18);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(59,130,246,.11) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 90% 90%, rgba(6,182,212,.06) 0%, transparent 60%);
+    }
+
+    /* ── HEADER ── */
+    header { text-align:center; padding:48px 20px 24px; }
+    .badge {
+      display:inline-flex; align-items:center; gap:8px;
+      background:rgba(59,130,246,.10); border:1px solid rgba(59,130,246,.26);
+      padding:5px 16px; border-radius:99px;
+      font-size:11px; font-weight:600; color:var(--cyan);
+      text-transform:uppercase; letter-spacing:1.2px; margin-bottom:18px;
+    }
+    .badge-dot {
+      width:7px; height:7px; background:var(--cyan); border-radius:50%;
+      animation: blink 1.8s ease-in-out infinite;
+    }
+    @keyframes blink {
+      0%,100%{ opacity:1; transform:scale(1) }
+      50%{ opacity:.3; transform:scale(1.5) }
+    }
+    header h1 {
+      font-size:clamp(1.75rem,5vw,3rem); font-weight:800;
+      background:linear-gradient(135deg,#dbeafe 0%,#93c5fd 45%,#67e8f9 100%);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+      background-clip:text; margin-bottom:12px; line-height:1.15;
+    }
+    header p { color:var(--muted); font-size:.98rem; max-width:520px; margin:0 auto; line-height:1.7; }
+
+    /* ── MAIN ── */
+    main { max-width:980px; margin:0 auto; padding:0 18px 80px; }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:20px; padding:30px 34px; margin-bottom:28px;
+      box-shadow:var(--glow); position:relative; overflow:hidden;
+    }
+    .form-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),transparent);
+    }
+    .form-row {
+      display:grid; grid-template-columns:1fr 1fr; gap:14px;
+      margin-bottom:14px; align-items:end;
+    }
+    .form-row-2 {
+      display:grid; grid-template-columns:1fr auto; gap:14px;
+      margin-bottom:16px; align-items:end;
+    }
+    .field-group { display:flex; flex-direction:column; }
+    .field-label {
+      font-size:11px; font-weight:600; text-transform:uppercase;
+      letter-spacing:1px; color:var(--muted); margin-bottom:7px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .optional-tag {
+      font-size:9px; background:rgba(167,139,250,.15);
+      border:1px solid rgba(167,139,250,.3); color:var(--purple);
+      padding:1px 7px; border-radius:99px; letter-spacing:.5px;
+    }
+    .field-input, .field-select {
+      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.09);
+      border-radius:10px; padding:12px 14px; color:var(--text);
+      font-family:'Inter',sans-serif; font-size:.92rem; outline:none;
+      width:100%; transition:border-color .2s,box-shadow .2s,background .2s;
+    }
+    .field-input:focus, .field-select:focus {
+      border-color:var(--blue); box-shadow:0 0 0 3px rgba(59,130,246,.14);
+      background:rgba(59,130,246,.05);
+    }
+    .field-input::placeholder { color:rgba(122,144,173,.55); }
+    .field-select {
+      appearance:none; -webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237a90ad' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 13px center;
+      padding-right:36px; cursor:pointer;
+    }
+    .field-select option { background:#152336; color:var(--text); }
+
+    /* Weather select — special coloured left border when not default */
+    .weather-select-wrap { position:relative; }
+    .weather-select-wrap .field-select { padding-left:38px; }
+    .weather-icon-overlay {
+      position:absolute; left:12px; top:50%; transform:translateY(-50%);
+      font-size:16px; pointer-events:none; line-height:1;
+    }
+
+    .predict-btn {
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      border:none; border-radius:10px; padding:12px 28px;
+      color:#fff; font-family:'Inter',sans-serif; font-size:.92rem;
+      font-weight:700; cursor:pointer; white-space:nowrap; letter-spacing:.3px;
+      box-shadow:0 4px 20px rgba(59,130,246,.32);
+      transition:opacity .2s,transform .15s,box-shadow .2s;
+      height:46px; align-self:end;
+    }
+    .predict-btn:hover { opacity:.88; transform:translateY(-1px); box-shadow:0 8px 28px rgba(59,130,246,.42); }
+    .predict-btn:active { transform:translateY(0); }
+
+    /* Quick picks */
+    .quick-picks { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+    .qp-label { font-size:11px; color:var(--muted); }
+    .qp-tag {
+      font-size:11px; padding:3px 11px; border-radius:99px; font-weight:500;
+      cursor:pointer; border:1px solid; transition:transform .15s,opacity .15s;
+      user-select:none;
+    }
+    .qp-tag:hover { transform:scale(1.06); opacity:.85; }
+    .it   { color:#818cf8; border-color:rgba(129,140,248,.3); background:rgba(129,140,248,.07); }
+    .comm { color:#fb923c; border-color:rgba(251,146,60,.3);  background:rgba(251,146,60,.07); }
+    .res  { color:#4ade80; border-color:rgba(74,222,128,.3);  background:rgba(74,222,128,.07); }
+    .mix  { color:#f472b6; border-color:rgba(244,114,182,.3); background:rgba(244,114,182,.07); }
+
+    /* ── ERROR BANNER ── */
+    .error-banner {
+      display:flex; align-items:flex-start; gap:16px;
+      background:rgba(249,115,22,.08); border:1px solid rgba(249,115,22,.30);
+      border-radius:16px; padding:20px 24px; margin-bottom:28px;
+      animation:fadeUp .4s ease both;
+    }
+    .err-icon { font-size:24px; flex-shrink:0; margin-top:2px; }
+    .err-title { font-size:.95rem; font-weight:700; color:var(--orange); margin-bottom:5px; }
+    .err-msg { font-size:.875rem; color:var(--muted); line-height:1.6; }
+
+    /* ── WEATHER & HOLIDAY BANNERS ── */
+    .weather-banner {
+      display:flex; align-items:center; gap:12px;
+      background:rgba(6,182,212,.07); border:1px solid rgba(6,182,212,.22);
+      border-radius:12px; padding:12px 18px; margin-bottom:12px;
+      font-size:.85rem; color:var(--cyan);
+    }
+    .holiday-banner {
+      display:flex; align-items:center; gap:12px;
+      background:rgba(234,179,8,.07); border:1px solid rgba(234,179,8,.22);
+      border-radius:12px; padding:12px 18px; margin-bottom:20px;
+      font-size:.85rem; color:var(--yellow);
+    }
+    .weather-banner strong, .holiday-banner strong { color:var(--text); }
+
+    /* ── AUTOCOMPLETE & LIVE API ── */
+    .ac-wrapper { position: relative; width: 100%; }
+    .ac-list {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 8px; margin-top: 4px; max-height: 200px; overflow-y: auto;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5); display: none;
+    }
+    .ac-item {
+      padding: 10px 14px; cursor: pointer; color: var(--text); font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .ac-item:last-child { border-bottom: none; }
+    .ac-item:hover { background: rgba(59,130,246,0.15); color: var(--cyan); }
+    .live-wx {
+      font-size: 10px; color: var(--green); display: flex; align-items: center; gap: 4px;
+      margin-top: 4px; font-weight: 600;
+    }
+    .live-wx i { display: inline-block; width: 6px; height: 6px; background: var(--green); border-radius: 50%; box-shadow: 0 0 5px var(--green); }
+
+    /* ── LANGUAGE SWITCHER ── */
+    .lang-switcher {
+      position: absolute; top: 20px; right: 20px;
+      display: flex; gap: 4px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);
+    }
+    .lang-btn {
+      background: transparent; border: none; color: var(--muted); font-size: 11px; font-weight: 600;
+      padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
+    }
+    .lang-btn.active { background: rgba(59,130,246,0.2); color: var(--blue); }
+    
+    /* ── CHECKBOX ── */
+    .checkbox-wrap {
+      display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--muted); margin-top: 10px;
+    }
+    .checkbox-wrap input[type="checkbox"] { accent-color: var(--blue); width: 16px; height: 16px; cursor: pointer; }
+    .holiday-hl { color: var(--yellow); font-weight: 600; }
+
+    /* ── RESULTS ── */
+    .results { animation:fadeUp .45s ease both; }
+    @keyframes fadeUp {
+      from{ opacity:0; transform:translateY(20px) }
+      to  { opacity:1; transform:translateY(0) }
+    }
+
+    /* Location header */
+    .loc-header { display:flex; align-items:center; gap:14px; margin-bottom:22px; }
+    .loc-icon-box {
+      width:48px; height:48px;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      border-radius:14px; display:flex; align-items:center;
+      justify-content:center; font-size:22px; flex-shrink:0;
+    }
+    .loc-header h2 { font-size:1.35rem; font-weight:800; line-height:1.25; }
+    .loc-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:5px; }
+    .zone-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 10px; border-radius:99px; font-size:10px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.7px;
+      background:rgba(59,130,246,.13); border:1px solid rgba(59,130,246,.28); color:var(--cyan);
+    }
+    .day-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 10px; border-radius:99px; font-size:10px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.7px;
+      background:rgba(234,179,8,.12); border:1px solid rgba(234,179,8,.28); color:var(--yellow);
+    }
+    .weather-pill {
+      display:inline-flex; align-items:center; gap:4px;
+      padding:2px 10px; border-radius:99px; font-size:10px; font-weight:700;
+      text-transform:uppercase; letter-spacing:.7px;
+      background:rgba(6,182,212,.12); border:1px solid rgba(6,182,212,.28); color:var(--cyan);
+    }
+
+    /* ── SUMMARY CARDS ── */
+    .summary-grid {
+      display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:14px; margin-bottom:24px;
+    }
+    .s-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:16px; padding:18px 20px; position:relative; overflow:hidden;
+      transition:transform .2s,box-shadow .2s;
+    }
+    .s-card:hover { transform:translateY(-3px); box-shadow:0 14px 36px rgba(0,0,0,.3); }
+    .s-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .s-card.c-red::before    { background:linear-gradient(90deg,var(--red),var(--orange)); }
+    .s-card.c-orange::before { background:linear-gradient(90deg,var(--orange),var(--yellow)); }
+    .s-card.c-green::before  { background:linear-gradient(90deg,var(--green),#86efac); }
+    .s-card.c-blue::before   { background:linear-gradient(90deg,var(--blue),var(--cyan)); }
+    .s-icon  { font-size:22px; margin-bottom:10px; display:block; }
+    .s-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:4px; }
+    .s-val   { font-size:1.05rem; font-weight:700; color:var(--text); line-height:1.4; }
+    .s-sub   { font-size:.78rem; color:var(--muted); margin-top:4px; }
+
+    /* ── GAUGE ROW ── */
+    .gauge-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin-bottom:28px; }
+    .gauge-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px 20px; }
+    .g-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--muted); margin-bottom:10px; }
+    .g-val   { font-size:1.9rem; font-weight:800; line-height:1; margin-bottom:10px; }
+    .g-val.red    { color:var(--red); }
+    .g-val.orange { color:var(--orange); }
+    .g-val.green  { color:var(--green); }
+    .g-bar  { width:100%; height:8px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; }
+    .g-fill { height:100%; border-radius:99px; width:0%; transition:width 1.1s cubic-bezier(.4,0,.2,1); }
+    .g-fill.red    { background:linear-gradient(90deg,var(--orange),var(--red)); }
+    .g-fill.orange { background:linear-gradient(90deg,var(--yellow),var(--orange)); }
+    .g-fill.green  { background:linear-gradient(90deg,var(--green),#86efac); }
+    .g-note { font-size:10px; color:var(--muted); margin-top:6px; }
+
+    /* ──────────────────────────────────────────────────────── */
+    /* ── 7-DAY FORECAST GRID ── */
+    /* ──────────────────────────────────────────────────────── */
+    .section-header {
+      display:flex; align-items:baseline; gap:10px; margin-bottom:4px;
+    }
+    .section-title { font-size:.9rem; font-weight:700; color:var(--text); }
+    .section-sub   { font-size:.78rem; color:var(--muted); margin-bottom:14px; }
+
+    .week-grid {
+      display:grid; grid-template-columns:repeat(7,1fr);
+      gap:10px; margin-bottom:28px;
+    }
+    .day-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:16px; padding:14px 10px 12px;
+      text-align:center; cursor:pointer; position:relative; overflow:hidden;
+      transition:transform .2s, box-shadow .2s, border-color .2s;
+    }
+    .day-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(0,0,0,.3); }
+    .day-card.active {
+      border-color:rgba(59,130,246,.55);
+      background:rgba(59,130,246,.08);
+      box-shadow:0 0 0 2px rgba(59,130,246,.25), var(--glow);
+    }
+    .day-card::before {
+      content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    }
+    .day-card.heavy::before   { background:linear-gradient(90deg,var(--red),var(--orange)); }
+    .day-card.moderate::before{ background:linear-gradient(90deg,var(--orange),var(--yellow)); }
+    .day-card.light::before   { background:linear-gradient(90deg,var(--green),#86efac); }
+
+    .day-short  { font-size:11px; font-weight:800; letter-spacing:.8px; color:var(--muted); text-transform:uppercase; margin-bottom:6px; }
+    .day-avg    { font-size:1.4rem; font-weight:800; line-height:1; margin-bottom:4px; }
+    .day-badge  {
+      font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+      padding:2px 7px; border-radius:99px; display:inline-block; margin-bottom:8px;
+    }
+    .badge-heavy    { background:rgba(239,68,68,.15);  color:var(--red);    border:1px solid rgba(239,68,68,.28); }
+    .badge-moderate { background:rgba(249,115,22,.15); color:var(--orange); border:1px solid rgba(249,115,22,.28); }
+    .badge-light    { background:rgba(34,197,94,.12);  color:var(--green);  border:1px solid rgba(34,197,94,.28); }
+
+    /* Mini sparkline canvas */
+    .day-spark { width:100%; height:28px; display:block; }
+
+    .day-mini-stats {
+      margin-top:7px; font-size:9.5px; color:var(--muted);
+      display:flex; flex-direction:column; gap:2px;
+    }
+    .day-mini-stats span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    /* Weekend tag */
+    .weekend-tag {
+      position:absolute; top:6px; right:6px;
+      font-size:8px; font-weight:700; text-transform:uppercase;
+      background:rgba(167,139,250,.15); color:var(--purple);
+      border:1px solid rgba(167,139,250,.3); padding:1px 5px; border-radius:99px;
+    }
+
+    /* ── 24-HOUR BREAKDOWN ── */
+    .hours-grid {
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(92px,1fr));
+      gap:10px; margin-bottom:28px;
+    }
+    .hour-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:12px; padding:12px 10px 10px; text-align:center;
+      transition:transform .18s,box-shadow .18s; position:relative; overflow:hidden;
+    }
+    .hour-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px rgba(0,0,0,.3); }
+    .hour-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .hour-card.lvl-high::before   { background:linear-gradient(90deg,var(--red),var(--orange)); }
+    .hour-card.lvl-medium::before { background:linear-gradient(90deg,var(--orange),var(--yellow)); }
+    .hour-card.lvl-low::before    { background:linear-gradient(90deg,var(--green),#86efac); }
+    .h-time  { font-size:12px; font-weight:700; color:var(--text); margin-bottom:7px; }
+    .h-badge {
+      display:inline-block; padding:2px 8px; border-radius:99px;
+      font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; margin-bottom:8px;
+    }
+    .badge-high   { background:rgba(239,68,68,.18);  color:var(--red);    border:1px solid rgba(239,68,68,.3); }
+    .badge-medium { background:rgba(249,115,22,.18); color:var(--orange); border:1px solid rgba(249,115,22,.3); }
+    .badge-low    { background:rgba(34,197,94,.15);  color:var(--green);  border:1px solid rgba(34,197,94,.3); }
+    .h-bar-wrap { width:100%; height:5px; background:rgba(255,255,255,.06); border-radius:99px; overflow:hidden; margin-bottom:6px; }
+    .h-bar-fill { height:100%; border-radius:99px; }
+    .fill-high   { background:linear-gradient(90deg,var(--orange),var(--red)); }
+    .fill-medium { background:linear-gradient(90deg,var(--yellow),var(--orange)); }
+    .fill-low    { background:linear-gradient(90deg,var(--green),#86efac); }
+    .h-pct { font-size:11px; font-weight:600; color:var(--muted); }
+    .h-desc { font-size:9px; color:var(--muted); margin-top:3px; line-height:1.3; }
+
+    /* ── CONGESTION EXPLAINER CARD ── */
+    .explainer-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:16px; padding:16px 22px; margin-bottom:28px;
+      display:flex; flex-wrap:wrap; gap:0;
+    }
+    .explainer-title {
+      width:100%; font-size:10px; font-weight:700; text-transform:uppercase;
+      letter-spacing:1px; color:var(--muted); margin-bottom:12px;
+      display:flex; align-items:center; gap:6px;
+    }
+    .ex-band {
+      flex:1; min-width:130px; padding:10px 14px;
+      border-left:3px solid; display:flex; flex-direction:column; gap:3px;
+    }
+    .ex-band:first-of-type { border-left:none; }
+    .ex-band.ex-low  { border-color:var(--green); }
+    .ex-band.ex-med  { border-color:var(--orange); }
+    .ex-band.ex-high { border-color:var(--red); }
+    .ex-range { font-size:11px; font-weight:800; }
+    .ex-range.low  { color:var(--green); }
+    .ex-range.med  { color:var(--orange); }
+    .ex-range.high { color:var(--red); }
+    .ex-label { font-size:12px; font-weight:700; color:var(--text); }
+    .ex-speed { font-size:10px; color:var(--muted); }
+    .ex-veh   { font-size:10px; color:var(--muted); }
+
+    /* ── CHART CARD ── */
+    .chart-card {
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:20px; padding:24px 28px;
+      box-shadow:0 4px 40px rgba(0,0,0,.26); margin-bottom:24px;
+    }
+    .chart-wrap { position:relative; height:255px; }
+    .chart-legend { display:flex; gap:18px; flex-wrap:wrap; margin-bottom:18px; }
+    .leg-item { display:flex; align-items:center; gap:6px; font-size:11.5px; color:var(--muted); }
+    .leg-dot  { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align:center; padding:28px 20px; color:var(--muted);
+      font-size:.79rem; border-top:1px solid rgba(255,255,255,.05);
+    }
+    footer strong { color:var(--blue); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width:780px) {
+      .week-grid { grid-template-columns:repeat(4,1fr); }
+      .gauge-row { grid-template-columns:1fr 1fr; }
+      .form-row  { grid-template-columns:1fr; }
+      .form-row-2{ grid-template-columns:1fr; }
+      .predict-btn { width:100%; }
+      .form-card { padding:22px 16px; }
+      .chart-card{ padding:18px 14px; }
+    }
+    @media (max-width:500px) {
+      .week-grid { grid-template-columns:repeat(4,1fr); }
+      .gauge-row { grid-template-columns:1fr; }
+      .hours-grid{ grid-template-columns:repeat(4,1fr); }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <div class="badge">
+      <span class="badge-dot"></span>
+      AI-Powered · Bengaluru Traffic Intelligence
+    </div>
+    <h1>Traffic Flow Predictor</h1>
+    <p>Enter any Bengaluru location and instantly see the full 7-day forecast, weather impact, and 24-hour breakdown.</p>
+  </header>
+
+  <main>
+
+    <!-- ═══════════ FORM ═══════════ -->
+    <div class="lang-switcher">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('kn')">ಕನ್ನಡ</button>
+      <button class="lang-btn" onclick="setLang('hi')">हिंदी</button>
+    </div>
+    <div class="form-card">
+      <form method="POST" action="/predict" id="predict-form">
+
+        <!-- Row 1: Location + Day -->
+        <div class="form-row">
+          <div class="field-group">
+            <label class="field-label" for="location">📍 Location / Road Name</label>
+            <div class="ac-wrapper">
+              <input class="field-input" type="text" id="location" name="location"
+                placeholder="e.g. Whitefield, MG Road, BTM Layout…"
+                value="{{ result.location if result else '' }}" required autocomplete="off" />
+              <div class="ac-list" id="ac-list"></div>
+            </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="day_name">📅 Day of Week</label>
+            <select class="field-select" id="day_name" name="day_name">
+              {% set days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'] %}
+              {% set sel_day = result.day_name if result else request.form.get('day_name','Monday') %}
+              {% for d in days %}
+              <option value="{{ d }}" {% if sel_day==d %}selected{% endif %}>{{ d }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Row 2: Weather (optional) + Submit -->
+        <div class="form-row-2">
+          <div class="field-group">
+            <label class="field-label" for="weather">
+              🌤️ Weather Condition
+              <span class="optional-tag">OPTIONAL</span>
+            </label>
+            <div class="weather-select-wrap">
+              <span class="weather-icon-overlay" id="wx-icon">☀️</span>
+              <select class="field-select" id="weather" name="weather" onchange="updateWeatherIcon(this)">
+                {% set sel_wx = request.form.get('weather', 'auto' if api_key_set else 'clear') %}
+                {% if api_key_set %}<option value="auto" {% if sel_wx=='auto' %}selected{% endif %}>🌍 Auto-Detect (Live Bengaluru Weather)</option>{% endif %}
+                <option value="clear"        {% if sel_wx=='clear' %}selected{% endif %}>☀️  Clear {% if not api_key_set %}(Default){% endif %}</option>
+                <option value="light_rain"   {% if sel_wx=='light_rain' %}selected{% endif %}>🌧️  Light Rain</option>
+                <option value="heavy_rain"   {% if sel_wx=='heavy_rain' %}selected{% endif %}>⛈️  Heavy Rain</option>
+                <option value="fog"          {% if sel_wx=='fog' %}selected{% endif %}>🌫️  Fog / Mist</option>
+                <option value="thunderstorm" {% if sel_wx=='thunderstorm' %}selected{% endif %}>⚡  Thunderstorm</option>
+              </select>
+            </div>
+            {% if api_key_set %}
+            <div class="live-wx" id="live-wx-status">
+              <i></i> <span id="live-wx-text">Live weather auto-detection enabled</span>
+            </div>
+            {% endif %}
+          </div>
+          <button class="predict-btn" type="submit" id="submit-btn">🔍 Predict</button>
+        </div>
+
+        <!-- Holiday toggle -->
+        <div class="field-group" style="padding-top:10px;">
+          <label class="field-label" for="simulated_holiday">📅 Simulate Indian Holiday / Event</label>
+          <select class="field-select" id="simulated_holiday" name="simulated_holiday">
+            <option value="">None (Regular Traffic)</option>
+            {% set sel_hol = request.form.get('simulated_holiday', '') %}
+            {% for date, h in holidays_db.items() %}
+            <option value="{{ date }}" {% if sel_hol == date %}selected{% endif %}>{{ h.emoji }} {{ h.name }} ({{ date }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Quick picks -->
+        <div class="quick-picks">
+          <span class="qp-label">Quick pick:</span>
+          <span class="qp-tag it"   onclick="fillLoc('Whitefield')">Whitefield</span>
+          <span class="qp-tag it"   onclick="fillLoc('Marathahalli')">Marathahalli</span>
+          <span class="qp-tag comm" onclick="fillLoc('MG Road')">MG Road</span>
+          <span class="qp-tag comm" onclick="fillLoc('Indiranagar')">Indiranagar</span>
+          <span class="qp-tag comm" onclick="fillLoc('Koramangala')">Koramangala</span>
+          <span class="qp-tag res"  onclick="fillLoc('Jayanagar')">Jayanagar</span>
+          <span class="qp-tag res"  onclick="fillLoc('Yelahanka')">Yelahanka</span>
+          <span class="qp-tag mix"  onclick="fillLoc('BTM Layout')">BTM Layout</span>
+          <span class="qp-tag mix"  onclick="fillLoc('Hebbal')">Hebbal</span>
+        </div>
+
+      </form>
+    </div><!-- /.form-card -->
+
+
+    <!-- ═══════════ ERROR ═══════════ -->
+    {% if error %}
+    <div class="error-banner" id="error-banner">
+      <span class="err-icon">⚠️</span>
+      <div>
+        <div class="err-title">Location Not Found</div>
+        <div class="err-msg">{{ error }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+
+    <!-- ═══════════ RESULTS ═══════════ -->
+    {% if result %}
+    <div class="results" id="results-section">
+
+      <!-- Location + Zone header -->
+      <div class="loc-header">
+        <div class="loc-icon-box">📍</div>
+        <div>
+          <h2>{{ result.location }}</h2>
+          <div class="loc-meta">
+            <span class="zone-pill">🗺 {{ result.mapped_zone }}</span>
+            <span class="day-pill">📅 {{ result.day_name }}</span>
+            {% if result.weather_key != 'clear' %}
+            <span class="weather-pill">{{ result.weather_icon }} {{ result.weather_label }} · {{ result.weather_boost }} congestion</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Holiday impact notice -->
+      {% if result.holiday_applied and result.holiday_info %}
+      <div class="holiday-banner">
+        <span style="font-size:20px">{{ result.holiday_info.emoji }}</span>
+        <span><strong data-th="holiday_banner_strong">{{ result.holiday_info.name }}</strong> <span data-th="holiday_banner_detected">detected — all times adjusted for</span> <strong>{{ result.holiday_info.desc }}</strong></span>
+      </div>
+      {% endif %}
+
+      <!-- Weather impact notice -->
+      {% if result.weather_affected %}
+      <div class="weather-banner">
+        <span style="font-size:20px">{{ result.weather_icon }}</span>
+        <span><strong>{{ result.weather_label }}</strong> conditions detected — all intensity values are adjusted <strong>{{ result.weather_boost }}</strong> higher than clear-weather baseline due to reduced road speeds.</span>
+      </div>
+      {% endif %}
+
+      <!-- Summary cards -->
+      <div class="summary-grid">
+        <div class="s-card c-red">
+          <span class="s-icon">🚗</span>
+          <div class="s-label">High Traffic Hours</div>
+          <div class="s-val">{{ result.high_traffic }}</div>
+          <div class="s-sub">{{ result.high_count }} hrs of heavy congestion</div>
+        </div>
+        <div class="s-card c-orange">
+          <span class="s-icon">🟡</span>
+          <div class="s-label">Moderate Traffic Hours</div>
+          <div class="s-val">{{ result.medium_traffic }}</div>
+          <div class="s-sub">{{ result.med_count }} hrs of moderate flow</div>
+        </div>
+        <div class="s-card c-green">
+          <span class="s-icon">🟢</span>
+          <div class="s-label">Best Time to Travel</div>
+          <div class="s-val">{{ result.best_time }}</div>
+          <div class="s-sub">{{ result.low_count }} hrs of low / no traffic</div>
+        </div>
+        <div class="s-card c-blue">
+          <span class="s-icon">📊</span>
+          <div class="s-label">Avg Daily Intensity</div>
+          <div class="s-val">{{ result.avg_intensity }}%</div>
+          <div class="s-sub">Peak: {{ result.peak_intensity }}% · Min: {{ result.low_intensity }}%</div>
+        </div>
+      </div>
+
+      <!-- Congestion scale explainer -->
+      <div class="explainer-card">
+        <div class="explainer-title">📊 What does the % mean? — Congestion Scale</div>
+        <div class="ex-band ex-low">
+          <div class="ex-range low">0 – 34%</div>
+          <div class="ex-label">🟢 Free Flow</div>
+          <div class="ex-speed">~40–60 km/h avg speed</div>
+          <div class="ex-veh">~200–800 vehicles/hr</div>
+        </div>
+        <div class="ex-band ex-med">
+          <div class="ex-range med">35 – 64%</div>
+          <div class="ex-label">🟠 Moderate Congestion</div>
+          <div class="ex-speed">~15–35 km/h avg speed</div>
+          <div class="ex-veh">~800–2,000 vehicles/hr</div>
+        </div>
+        <div class="ex-band ex-high">
+          <div class="ex-range high">65 – 100%</div>
+          <div class="ex-label">🔴 Heavy / Bumper-to-Bumper</div>
+          <div class="ex-speed">&lt;15 km/h avg speed</div>
+          <div class="ex-veh">2,000+ vehicles/hr</div>
+        </div>
+      </div>
+
+      <!-- Gauge row -->
+      <div class="gauge-row">
+        <div class="gauge-card">
+          <div class="g-label">⚡ Peak Intensity</div>
+          <div class="g-val red">{{ result.peak_intensity }}%</div>
+          <div class="g-bar"><div class="g-fill red" id="g-peak" style="width:0%"></div></div>
+          <div class="g-note">Worst congestion of the day</div>
+        </div>
+        <div class="gauge-card">
+          <div class="g-label">📈 Average Intensity</div>
+          <div class="g-val orange">{{ result.avg_intensity }}%</div>
+          <div class="g-bar"><div class="g-fill orange" id="g-avg" style="width:0%"></div></div>
+          <div class="g-note">Overall {{ result.day_name }} traffic load</div>
+        </div>
+        <div class="gauge-card">
+          <div class="g-label">🌱 Off-Peak Intensity</div>
+          <div class="g-val green">{{ result.low_intensity }}%</div>
+          <div class="g-bar"><div class="g-fill green" id="g-low" style="width:0%"></div></div>
+          <div class="g-note">Best-case smooth travel window</div>
+        </div>
+      </div>
+
+      <!-- ══ 7-DAY FORECAST ══ -->
+      <div class="section-header">
+        <div class="section-title">📅 7-Day Weekly Forecast</div>
+      </div>
+      <div class="section-sub">
+        Tap any day to switch to its full 24-hour breakdown
+        {% if result.weather_affected %} · {{ result.weather_icon }} {{ result.weather_label }} applied to all days{% endif %}
+      </div>
+
+      <div class="week-grid" id="week-grid">
+        {% for wd in result.weekly_data %}
+        {% set badge_lower = wd.badge | lower %}
+        <div class="day-card {{ badge_lower }} {% if wd.day_name == result.day_name %}active{% endif %}"
+             id="day-card-{{ wd.day_name }}"
+             onclick="switchDay('{{ wd.day_name }}')"
+             title="{{ wd.day_name }} — Avg {{ wd.avg }}% · Peak {{ wd.peak }}%">
+          {% if wd.day_type == 'Weekend' %}
+          <span class="weekend-tag">WKD</span>
+          {% endif %}
+          <div class="day-short">{{ wd.day_short }}</div>
+          <div class="day-avg" style="color:{{ wd.badge_color }}">{{ wd.avg }}%</div>
+          <div class="day-badge badge-{{ badge_lower }}">{{ wd.badge }}</div>
+          <canvas class="day-spark" id="spark-{{ wd.day_name }}"
+                  data-values="{{ wd.spark | tojson }}"
+                  data-color="{{ wd.badge_color }}"></canvas>
+          <div class="day-mini-stats">
+            <span>🔴 Peak {{ wd.peak }}%</span>
+            <span title="Best time: {{ wd.best_time }}">🟢 Best: {{ wd.best_time[:12] }}…</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div><!-- /.week-grid -->
+
+      <!-- ── 24-HOUR BREAKDOWN ── -->
+      <div class="section-title">🕐 24-Hour Traffic Breakdown —
+        <span id="breakdown-day-label">{{ result.day_name }}</span>
+      </div>
+      <div class="section-sub">Hourly traffic status for {{ result.location }}</div>
+
+      <div class="hours-grid" id="hours-grid">
+        {% for h in result.hourly_data %}
+        {% set veh = (h.intensity * 30) | int %}
+        {% set spd = '40–60 km/h' if h.intensity < 35 else ('<15 km/h' if h.intensity >= 65 else '15–35 km/h') %}
+        <div class="hour-card lvl-{{ h.level_name | lower }}"
+             title="{{ h.label }}: {{ h.level_name }} · ~{{ veh }} veh/hr · {{ spd }}">
+          <div class="h-time">{{ h.label }}</div>
+          <div class="h-badge badge-{{ h.level_name | lower }}">{{ h.level_name }}</div>
+          <div class="h-bar-wrap">
+            <div class="h-bar-fill fill-{{ h.level_name | lower }}" style="width:{{ h.intensity }}%"></div>
+          </div>
+          <div class="h-pct">{{ h.intensity }}%</div>
+          <div class="h-desc">~{{ veh }} veh/hr</div>
+          <div class="h-desc">{{ spd }}</div>
+        </div>
+        {% endfor %}
+      </div><!-- /.hours-grid -->
+
+      <!-- ── CHART ── -->
+      <div class="chart-card">
+        <div class="section-title">📈 Traffic Intensity vs. Hour —
+          <span id="chart-day-label">{{ result.day_name }}</span>
+        </div>
+        <div class="section-sub" style="margin-bottom:14px">
+          Hourly intensity curve for <strong style="color:var(--text)">{{ result.location }}</strong>
+          ({{ result.mapped_zone }}){% if result.weather_affected %} · {{ result.weather_icon }} {{ result.weather_label }}{% endif %}
+        </div>
+        <div class="chart-legend">
+          <div class="leg-item"><span class="leg-dot" style="background:var(--red)"></span>High (&ge;65%)</div>
+          <div class="leg-item"><span class="leg-dot" style="background:var(--orange)"></span>Medium (35–64%)</div>
+          <div class="leg-item"><span class="leg-dot" style="background:var(--green)"></span>Low (&lt;35%)</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="traffic-chart"></canvas>
+        </div>
+      </div><!-- /.chart-card -->
+
+    </div><!-- /.results -->
+    {% endif %}
+
+  </main>
+
+  <footer>
+    Powered by <strong>Real Traffic Data</strong> (45,000+ hourly records) ·
+    Bengaluru Traffic Intelligence · Data-driven, zone-aware predictions
+  </footer>
+
+
+  <!-- ═══════════ SCRIPTS ═══════════ -->
+  <script>
+    /* ── Weather icon sync ── */
+    var WX_ICONS = { clear:'☀️', light_rain:'🌧️', heavy_rain:'⛈️', fog:'🌫️', thunderstorm:'⚡', auto:'🌍' };
+    function updateWeatherIcon(sel) {
+      if(!sel) return;
+      var el = document.getElementById('wx-icon');
+      if (el) el.textContent = WX_ICONS[sel.value] || '☀️';
+      var wxStatus = document.getElementById('live-wx-status');
+      if (wxStatus) {
+         if (sel.value === 'auto') {
+             wxStatus.style.display = 'flex';
+             fetchLiveWeather();
+         } else {
+             wxStatus.style.display = 'none';
+         }
+      }
+    }
+    (function(){ var s=document.getElementById('weather'); if(s) updateWeatherIcon(s); })();
+
+    function fillLoc(name) {
+      var inp = document.getElementById('location');
+      inp.value = name;
+      inp.focus();
+      hideAc();
+    }
+
+    /* ── UI Translations ── */
+    var translations = {
+      en: {
+        title: "Traffic Flow Predictor",
+        loc_label: "📍 Location / Road Name",
+        day_label: "📅 Day of Week",
+        wx_label: "🌤️ Weather Condition",
+        btn_predict: "🔍 Predict",
+        loc_ph: "e.g. Whitefield, MG Road, BTM Layout…",
+        qp_label: "Quick pick:"
+      },
+      kn: {
+        title: "ಟ್ರಾಫಿಕ್ ಮುನ್ಸೂಚನೆ (Traffic Predictor)",
+        loc_label: "📍 ಸ್ಥಳ / ರಸ್ತೆ ಹೆಸರು (Location)",
+        day_label: "📅 ವಾರದ ದಿನ (Day of Week)",
+        wx_label: "🌤️ ಹವಾಮಾನ (Weather)",
+        btn_predict: "🔍 ಮುನ್ಸೂಚನೆ (Predict)",
+        loc_ph: "ಉದಾ: Whitefield, MG Road…",
+        qp_label: "ತ್ವರಿತ ಆಯ್ಕೆ:"
+      },
+      hi: {
+        title: "ट्रैफ़िक फ्लो प्रेडिक्टर (Traffic Predictor)",
+        loc_label: "📍 स्थान / सड़क का नाम (Location)",
+        day_label: "📅 सप्ताह का दिन (Day of Week)",
+        wx_label: "🌤️ मौसम (Weather)",
+        btn_predict: "🔍 भविष्यवाणी (Predict)",
+        loc_ph: "उदाहरण: Whitefield, MG Road…",
+        qp_label: "त्वरित चयन:"
+      }
+    };
+
+    function setLang(langCode) {
+      document.querySelectorAll('.lang-btn').forEach(function(b) { b.classList.remove('active'); });
+      if(window.event && window.event.target) {
+        window.event.target.classList.add('active');
+      }
+      var t = translations[langCode];
+      if(!t) return;
+      document.querySelector('header h1').innerText = t.title;
+      document.querySelector('label[for="location"]').innerText = t.loc_label;
+      document.querySelector('label[for="day_name"]').innerText = t.day_label;
+      
+      var wxLabel = document.querySelector('label[for="weather"]');
+      if(wxLabel) {
+        wxLabel.innerHTML = t.wx_label + '\n<span class="optional-tag">OPTIONAL</span>';
+      }
+      var btn = document.getElementById('submit-btn');
+      if (btn) btn.innerText = t.btn_predict;
+      
+      var input = document.getElementById('location');
+      if(input) input.placeholder = t.loc_ph;
+      
+      var qpLabel = document.querySelector('.qp-label');
+      if(qpLabel) qpLabel.innerText = t.qp_label;
+    }
+
+    /* ── Autocomplete ── */
+    var acList = document.getElementById('ac-list');
+    var locInp = document.getElementById('location');
+    var acXhr  = null;
+
+    function hideAc() {
+      if (acList) acList.style.display = 'none';
+    }
+
+    if (locInp && acList) {
+      locInp.addEventListener('input', function () {
+        var q = this.value.trim();
+        if (q.length < 2) { hideAc(); return; }
+        if (acXhr) acXhr.abort();
+        acXhr = new XMLHttpRequest();
+        acXhr.open('GET', '/api/suggest?q=' + encodeURIComponent(q));
+        acXhr.onload = function () {
+          if (this.status !== 200) return;
+          var items = JSON.parse(this.responseText);
+          if (!items.length) { hideAc(); return; }
+          acList.innerHTML = items.map(function (n) {
+            return '<div class="ac-item" onmousedown="fillLoc(\'' + n.replace(/'/g, "\\'") + '\')">' + n + '</div>';
+          }).join('');
+          acList.style.display = 'block';
+        };
+        acXhr.send();
+      });
+      locInp.addEventListener('blur', function () {
+        setTimeout(hideAc, 150);
+      });
+      locInp.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') hideAc();
+        if (e.key === 'Enter') hideAc();
+      });
+    }
+
+    /* ── Live Bengaluru weather fetch ── */
+    function fetchLiveWeather() {
+      var statusEl = document.getElementById('live-wx-text');
+      if (!statusEl) return;
+      statusEl.textContent = '⏳ Fetching live weather...';
+      fetch('/api/weather')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.error) {
+            statusEl.textContent = '⚠️ ' + (d.message || 'Could not fetch weather');
+            return;
+          }
+          statusEl.innerHTML = '✅ <strong>Live:</strong> ' + d.weather_icon + ' ' + d.weather_label
+            + ' · ' + d.temp_c + '°C · ' + d.humidity + '% humidity';
+        })
+        .catch(function () { statusEl.textContent = '⚠️ Network error'; });
+    }
+
+    window.addEventListener('DOMContentLoaded', function() {
+      var sel = document.getElementById('weather');
+      var wxStatus = document.getElementById('live-wx-status');
+      if (sel && sel.value === 'auto' && wxStatus) {
+        fetchLiveWeather();
+      }
+    });
+  </script>
+
+  {% if result %}
+  <script>
+    (function () {
+      'use strict';
+
+      /* ── Server data ── */
+      var PEAK   = {{ result.peak_intensity }};
+      var AVG    = {{ result.avg_intensity }};
+      var LOW    = {{ result.low_intensity }};
+      var LABELS = {{ result.graph_labels | tojson }};
+      var DATA   = {{ result.graph_data | tojson }};
+
+      /* All 7-day weekly spark data + full hourly per day */
+      var WEEKLY = {{ result.weekly_data | tojson }};
+      var LOC_NAME = "{{ result.location }}";
+
+      /* ── Set initial document title ── */
+      var avgStr = AVG >= 65 ? '🔴 High' : AVG >= 35 ? '🟠 Med' : '🟢 Low';
+      document.title = avgStr + " — " + LOC_NAME + " {{ result.day_name }} | Traffic";
+
+      /* ── 1. Gauge bars ── */
+      requestAnimationFrame(function () {
+        setTimeout(function () {
+          var gp = document.getElementById('g-peak');
+          var ga = document.getElementById('g-avg');
+          var gl = document.getElementById('g-low');
+          if (gp) gp.style.width = PEAK + '%';
+          if (ga) ga.style.width = AVG  + '%';
+          if (gl) gl.style.width = LOW  + '%';
+        }, 160);
+      });
+
+      /* ── 2. Mini sparklines (one per day card) ── */
+      function drawSpark(canvas, values, color) {
+        var W = canvas.offsetWidth || 80;
+        var H = canvas.offsetHeight || 28;
+        canvas.width  = W * (window.devicePixelRatio || 1);
+        canvas.height = H * (window.devicePixelRatio || 1);
+        var ctx = canvas.getContext('2d');
+        ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+
+        var min = Math.min.apply(null, values);
+        var max = Math.max.apply(null, values);
+        var range = max - min || 1;
+        var step = W / (values.length - 1);
+
+        ctx.beginPath();
+        values.forEach(function (v, i) {
+          var x = i * step;
+          var y = H - ((v - min) / range) * (H - 4) - 2;
+          if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // Fill under
+        ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+        ctx.fillStyle = color.replace(')', ', 0.15)').replace('rgb', 'rgba');
+        ctx.fill();
+      }
+
+      requestAnimationFrame(function () {
+        WEEKLY.forEach(function (wd) {
+          var c = document.getElementById('spark-' + wd.day_name);
+          if (c) drawSpark(c, wd.spark, wd.badge_color);
+        });
+      });
+
+      /* ── 3. Main Chart.js graph ── */
+      var canvas = document.getElementById('traffic-chart');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+
+      var pointColors = DATA.map(function (v) {
+        return v >= 65 ? '#ef4444' : v >= 35 ? '#f97316' : '#22c55e';
+      });
+
+      var mainChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: LABELS,
+          datasets: [{
+            label: 'Traffic Intensity (%)',
+            data: DATA,
+            borderColor: '#3b82f6',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointBackgroundColor: pointColors,
+            pointBorderColor: 'transparent',
+            fill: true,
+            backgroundColor: function (context) {
+              var chart = context.chart;
+              var ca = chart.chartArea;
+              if (!ca) return 'rgba(59,130,246,0.08)';
+              var grad = ctx.createLinearGradient(0, ca.top, 0, ca.bottom);
+              grad.addColorStop(0, 'rgba(59,130,246,0.42)');
+              grad.addColorStop(0.6, 'rgba(59,130,246,0.10)');
+              grad.addColorStop(1, 'rgba(59,130,246,0.01)');
+              return grad;
+            },
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 900, easing: 'easeInOutQuart' },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#0f1d30',
+              titleColor: '#93c5fd',
+              bodyColor: '#dbeafe',
+              borderColor: 'rgba(59,130,246,0.28)',
+              borderWidth: 1,
+              padding: 12,
+              callbacks: {
+                label: function (c) {
+                  var v = c.raw;
+                  var s = v >= 65 ? '🔴 High' : v >= 35 ? '🟠 Medium' : '🟢 Low';
+                  return '  ' + s + '  —  ' + v + '%';
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.04)' },
+              ticks: { color: '#7a90ad', font: { size: 10 }, maxTicksLimit: 12 }
+            },
+            y: {
+              min: 0, max: 100,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: {
+                color: '#7a90ad', font: { size: 10 }, stepSize: 20,
+                callback: function (v) { return v + '%'; }
+              }
+            }
+          }
+        }
+      });
+
+      /* ── 4. Day switching (7-day grid → 24h breakdown + chart) ── */
+      var HOUR_LABELS = {{ result.graph_labels | tojson }};
+      var WEEKLY_MAP  = {};
+      WEEKLY.forEach(function (wd) { WEEKLY_MAP[wd.day_name] = wd; });
+
+      /* Level helpers */
+      function lvlClass(v){ return v>=65?'lvl-high':v>=35?'lvl-medium':'lvl-low'; }
+      function lvlName(v) { return v>=65?'High':v>=35?'Medium':'Low'; }
+      function fillClass(v){ return v>=65?'fill-high':v>=35?'fill-medium':'fill-low'; }
+      function badgeClass(v){ return v>=65?'badge-high':v>=35?'badge-medium':'badge-low'; }
+      function fmtH(h){
+        if(h===0)return'12 AM'; if(h===12)return'12 PM';
+        if(h<12)return h+' AM'; return (h%12)+' PM';
+      }
+
+      window.switchDay = function (dayName) {
+        var wd = WEEKLY_MAP[dayName];
+        if (!wd) return;
+
+        /* Update active card highlight */
+        document.querySelectorAll('.day-card').forEach(function(c){ c.classList.remove('active'); });
+        var ac = document.getElementById('day-card-' + dayName);
+        if (ac) ac.classList.add('active');
+
+        /* Update day labels */
+        var dl = document.getElementById('breakdown-day-label');
+        var cl = document.getElementById('chart-day-label');
+        if (dl) dl.textContent = dayName;
+        if (cl) cl.textContent = dayName;
+
+        /* Update document title */
+        var dayAvgStr = wd.avg >= 65 ? '🔴 High' : wd.avg >= 35 ? '🟠 Med' : '🟢 Low';
+        document.title = dayAvgStr + " — " + LOC_NAME + " " + dayName + " | Traffic";
+
+        /* Rebuild 24h grid */
+        var grid = document.getElementById('hours-grid');
+        if (grid) {
+          var html = '';
+          wd.spark.forEach(function (v, h) {
+            var lc = lvlClass(v), ln = lvlName(v), fc = fillClass(v), bc = badgeClass(v);
+            var veh = Math.round(v * 30);
+            var spd = v < 35 ? '40\u201360 km/h' : (v >= 65 ? '<15 km/h' : '15\u201335 km/h');
+            html += '<div class="hour-card ' + lc + '" title="' + fmtH(h) + ': ' + ln + ' \u00b7 ~' + veh + ' veh/hr \u00b7 ' + spd + '">'
+              + '<div class="h-time">' + fmtH(h) + '</div>'
+              + '<div class="h-badge ' + bc + '">' + ln + '</div>'
+              + '<div class="h-bar-wrap"><div class="h-bar-fill ' + fc + '" style="width:' + v + '%"></div></div>'
+              + '<div class="h-pct">' + v + '%</div>'
+              + '<div class="h-desc">~' + veh + ' veh/hr</div>'
+              + '<div class="h-desc">' + spd + '</div>'
+              + '</div>';
+          });
+          grid.innerHTML = html;
+        }
+
+        /* Update chart */
+        var ptColors = wd.spark.map(function(v){
+          return v>=65?'#ef4444':v>=35?'#f97316':'#22c55e';
+        });
+        mainChart.data.datasets[0].data = wd.spark;
+        mainChart.data.datasets[0].pointBackgroundColor = ptColors;
+        mainChart.update();
+      };
+
+    })();
+  </script>
+  {% endif %}
+
+</body>
+</html>
